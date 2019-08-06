@@ -209,7 +209,7 @@ class TaskListContract {
 # Model
 
 ```kotlin
-class TaskRepository : TaskListContract.Model {
+class InMemoryTaskService : TaskListContract.Model {
     override fun getTasks(): List<Task> {
         return listOf(
                 Task("Sample task 1"),
@@ -269,7 +269,7 @@ class TaskListPresenter(
 
 ---
 
-# Are We Done?
+# Is That Enough?
 
 - View does nothing but display data
 - Data fetching is all handled by model
@@ -356,3 +356,102 @@ class TaskListActivity : AppCompatActivity() {
 ```
 
 ---
+
+# This Is Pretty Close To MVP, With One New Benefit
+
+---
+
+# Since ViewModel Doesn't Reference View, We Can Leverage Android ViewModel To Outlast Config Changes
+
+---
+
+# Handle Rotation In MVP
+
+1. Update your presenter to save/restore state
+2. Modify the view to call appropriate save/restore methods
+
+---
+
+# Handle Rotation In MVP
+
+```kotlin
+class TaskListContract {
+    interface Presenter {
+        // New:
+        fun getState(): Bundle
+        fun restoreState(bundle: Bundle?)
+    }
+}
+```
+
+---
+
+# Handle Rotation In MVP
+
+```kotlin
+class TaskListActivity : AppCompatActivity(), TaskListContract.View {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // ...
+        presenter.restoreState(savedInstanceState)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putAll(presenter.getState())
+        super.onSaveInstanceState(outState)
+    }
+}
+```
+
+---
+
+# Handle Rotation In MVVM
+
+1. Have ViewModel class extend the Android ViewModel class
+2. Update Activity to use ViewModelProviders
+3. Since Android's ViewModel outlasts config changes, no need to save/restore state, just re-subscribe
+
+---
+
+# Handle Rotation In MVVM
+
+```kotlin
+class TaskListViewModel(
+        private val repository: TaskRepository
+) : ViewModel() {
+    // ...
+}
+```
+
+---
+
+# Handle Rotation In MVVM
+
+```kotlin
+class TaskListActivity : AppCompatActivity() {
+    private lateinit var viewModel: TaskListViewModel
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // ...
+
+        setupViewModel()
+    }
+
+    private fun setupViewModel() {
+        viewModel = ViewModelProviders.of(this, viewModelFactory).get(TaskListViewModel::class.java)
+
+        viewModel.tasks.observe(this, Observer(taskAdapter::tasks::set))
+    }
+}
+```
+
+---
+
+# Is That Enough?
+
+- View does nothing but display data
+- Data fetching is all handled by model
+- ViewModel handles all UI logic
+- We can easily save state across config changes
+- Everything is separated, everything is testable
+- If you think this is good enough, use it!
