@@ -287,7 +287,9 @@ class TaskListPresenter(
 
 ---
 
-# TODO: INSERT MVVM DIAGRAM HERE
+# Model-View-ViewModel
+
+![inline](mvvmdiagram.png)
 
 ---
 
@@ -455,3 +457,5 @@ class TaskListActivity : AppCompatActivity() {
 - We can easily save state across config changes
 - Everything is separated, everything is testable
 - If you think this is good enough, use it!
+
+
