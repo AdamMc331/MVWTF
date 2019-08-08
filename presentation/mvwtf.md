@@ -459,3 +459,102 @@ class TaskListActivity : AppCompatActivity() {
 - If you think this is good enough, use it!
 
 
+---
+
+# Where Does MVVM Fall Short?
+
+---
+
+# Let's Consider A More Complicated State
+
+---
+
+# Let's Consider A More Complicated State
+
+```kotlin
+sealed class TaskListState {
+    object Loading : TaskListState()
+    data class Loaded(val tasks: List<Task>) : TaskListState()
+    data class Error(val error: Throwable?) : TaskListState()
+}
+```
+
+---
+
+# Let's Consider A More Complicated State
+
+```kotlin
+class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
+    private val state = MutableLiveData<TaskListState>()
+    fun getState(): LiveData<TaskListState> = state
+
+    init {
+        showLoading()
+        try {
+            fetchTasks()
+        } catch (e: Exception) {
+            showError()
+        }
+    }
+
+    private fun showLoading() {
+        state.value = TaskListState.Loading
+    }
+
+    private fun fetchTasks() {
+        val tasks = repository.getItems()
+        state.value = TaskListState.Loaded(tasks)
+    }
+
+    private fun showError() {
+        state.value = TaskListState.Error(Throwable("Unable to fetch tasks."))
+    }
+}
+```
+
+---
+
+# What Are The Risks Of These Methods?
+
+```kotlin
+private fun showLoading() {
+    state.value = TaskListState.Loading
+}
+
+private fun fetchTasks() {
+    val tasks = repository.getItems()
+    state.value = TaskListState.Loaded(tasks)
+}
+
+private fun showError() {
+    state.value = TaskListState.Error(Throwable("Unable to fetch tasks."))
+}
+```
+
+---
+
+# What Are The Risks Of These Methods?
+
+- Any methods in the class can call them
+- We can't guarantee they're associated with a specific action or intent
+- We have multiple methods manipulating our state that we have to ensure don't conflict with each other
+
+---
+
+# How Can We Mitigate This Risk?
+
+- Have one single source of truth for our state
+- Do this through a single pipeline where every action causes a specific change in the state
+- This makes state changes predictable, and therefore highly testable as well
+
+---
+
+# Model-View-Intent
+
+---
+
+# Model-View-Intent
+
+- Unlike the previous patterns, "Intent" isn't used to reference a specific kind of component, but rather the _intention_ of doing something that we want to capture in our state.
+
+---
