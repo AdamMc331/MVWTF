@@ -61,6 +61,14 @@ build-lists: true
 
 ---
 
+# Or Your Fragment[^1]
+
+![inline](holdmyfragment.png)
+
+[^1]: Thanks Mauricio for proofreading
+
+---
+
 # Why Not?
 
 * Not readable
