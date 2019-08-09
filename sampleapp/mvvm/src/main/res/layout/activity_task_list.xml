@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout>
+    <data>
+        <variable
+                name="viewModel"
+                type="com.adammcneilly.tasklist.mvvm.TaskListViewModel"/>
+    </data>
+
     <androidx.coordinatorlayout.widget.CoordinatorLayout
             xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -25,6 +31,8 @@
                 android:id="@+id/task_list"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:visibility="visible"
+                app:visibilityCondition="@{viewModel.showTasks}"
                 app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
         <ProgressBar
@@ -32,6 +40,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
+                app:visibilityCondition="@{viewModel.showLoading}"
                 android:visibility="gone"/>
 
         <TextView
@@ -39,6 +48,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
+                app:visibilityCondition="@{viewModel.showError}"
                 android:text="@string/unable_to_fetch_tasks"
                 android:visibility="gone"/>
 
@@ -48,6 +58,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|end"
                 android:layout_margin="16dp"
+                android:onClick="@{() -> viewModel.addButtonClicked()}"
                 app:srcCompat="@drawable/ic_add_white_24dp"/>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
