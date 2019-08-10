@@ -567,4 +567,193 @@ private fun showError() {
 
 ---
 
+# The First Goal Is To Make Our State Changes Predictable
+
+---
+
+# We Achieve This With A Reducer
+
+```kotlin
+abstract class Reducer {
+    abstract fun reduce(action: Action, state: State): State
+}
+```
+
+---
+
+# Clearly Defined Inputs And Outputs
+
+```kotlin
+class TaskListReducer : Reducer<TaskListState>() {
+
+    override fun reduce(action: Action, state: TaskListState): TaskListState {
+        return when (action) {
+            is TaskListAction.TasksLoading -> TaskListState.Loading()
+            is TaskListAction.TasksLoaded -> TaskListState.Loaded(action.tasks)
+            is TaskListAction.TasksErrored -> TaskListState.Error()
+            else -> state
+        }
+    }
+}
+```
+
+---
+
+# We Also Want A Single Source Of Truth
+
+---
+
+# We Create A State Container Called A Store
+
+- Contains our state and exposes it for anyone to observe
+- Contains our reducer instance
+- Dispatches actions into that reducer to modify the state
+
+---
+
+# Store Implementation
+
+```kotlin
+class BaseStore<S : State>(
+    initialState: S,
+    private val reducer: Reducer<S>
+) {
+    private var stateListener: ((S) -> Unit)? = null
+
+    private var currentState: S = initialState
+        set(value) {
+            field = value
+            stateListener?.invoke(value)
+        }
+
+    fun dispatch(action: Action) {
+        currentState = reducer.reduce(action, currentState)
+    }
+
+    fun subscribe(stateListener: ((S) -> Unit)?) {
+        this.stateListener = stateListener
+    }
+}
+```
+
+---
+
+# Redux Diagram[^2]
+
+![inline](reduxdiagram.png)
+
+[^2]: https://www.esri.com/arcgis-blog/products/3d-gis/3d-gis/react-redux-building-modern-web-apps-with-the-arcgis-js-api/
+
+---
+
+# Hook This Up To Our ViewModel (Or Presenter!)
+
+```kotlin
+class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
+    private val state = MutableLiveData<TaskListState>()
+
+    private val store: BaseStore<TaskListState> = BaseStore(
+        TaskListState.Loading(),
+        TaskListReducer()
+    )
+
+    init {
+        store.subscribe(state::setValue)
+
+        if (state.value == null) {
+            fetchTasks()
+        }
+    }
+
+    private fun fetchTasks() {
+        store.dispatch(TaskListAction.TasksLoading)
+
+        try {
+            val tasks = repository.getTasks()
+            store.dispatch(TaskListAction.TasksLoaded(tasks))
+        } catch (e: Throwable) {
+            store.dispatch(TaskListAction.TasksErrored(e))
+        }
+    }
+}
+```
+
+---
+
+# Is That Enough?
+
+- View does nothing but display data
+- Data fetching is all handled by model
+- ViewModel handles UI logic
+- We can easily save state across config changes
+- Everything is separated, everything is testable
+- State management is clear and predictable
+- If you think this is good enough, use it!
+
+---
+
+# Is MVI The Best We Can Do?
+
+- State management is pretty solid
+- But, we have 22 letters that weren't covered yet. 
+
+---
+
+# What Should I Take Away From This?
+
+---
+
+# Model-View-Presenter
+
+- Separated concerns and allows us to unit test all of our code
+- Good for quick prototyping
+- Good for blog post samples because of its readability
+- Can handle config changes but requires a little more work
+- State management is unpredictable
+
+---
+
+# Model-View-ViewModel
+
+- Separated concerns and allows us to unit test all of our code
+- Even better for quick prototyping
+ - No contract class boilerplate
+- May be good for blog posts, but be conscious about how you expose information
+ - Unlike MVP where we have a direct reference to the view, MVVM requires an observable type
+ - Could be LiveData, RxJava, Event Bus, but these may be confusing to readers
+- Can handle config changes easily if we use Android's architecture components
+- State management is unpredictable
+
+---
+
+# Model-View-Intent
+
+- Can work with presenter or viewmodel
+ - Separated concerns, testability come with this
+- Not good for quick prototyping
+- Can be confusing if used for sample apps due to unfamiliarity
+- Can handle config changes based on whether we used a presenter or a viewmodel
+- State management is clear and predictable
+
+---
+
+# General Suggestions
+
+- MVP can get you up and running quickly, but due to the boilerplate and config changes work I wouldn't recommend it.
+- MVVM is what I'd recommend the most. It allows for separation of concerns and unit test support without a major learning curve. 
+- If your app handles complex user flows or states, MVI can give you more support for state management. 
+
+---
+
+# What's Most Important
+
+- Be consistent
+
+---
+
+## Thank you! 
+
+### https://github.com/adammc331/mvwtf
+
+
 
