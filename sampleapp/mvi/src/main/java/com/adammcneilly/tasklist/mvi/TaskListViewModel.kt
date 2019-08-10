@@ -25,7 +25,14 @@ class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
         state is TaskListState.Error
     }
 
+    private val store: BaseStore<TaskListState> = BaseStore(
+        TaskListState.Loading(),
+        TaskListReducer()
+    )
+
     init {
+        store.subscribe(state::setValue)
+
         if (state.value == null) {
             fetchTasks()
         }
@@ -34,18 +41,17 @@ class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
     fun addButtonClicked() {
         val taskNumber = Random.nextInt(0, 100)
         val newTask = Task(description = "Random Task $taskNumber")
-        val newTaskList = (state.value as? TaskListState.Loaded)?.tasks.orEmpty() + newTask
-        state.value = TaskListState.Loaded(newTaskList)
+        store.dispatch(TaskListAction.TaskAdded(newTask))
     }
 
     private fun fetchTasks() {
-        state.value = TaskListState.Loading()
+        store.dispatch(TaskListAction.TasksLoading)
 
         try {
             val tasks = repository.getTasks()
-            state.value = TaskListState.Loaded(tasks)
+            store.dispatch(TaskListAction.TasksLoaded(tasks))
         } catch (e: Throwable) {
-            state.value = TaskListState.Error()
+            store.dispatch(TaskListAction.TasksErrored(e))
         }
     }
 }

@@ -35,17 +35,29 @@ class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
         val taskNumber = Random.nextInt(0, 100)
         val newTask = Task(description = "Random Task $taskNumber")
         val newTaskList = (state.value as? TaskListState.Loaded)?.tasks.orEmpty() + newTask
-        state.value = TaskListState.Loaded(newTaskList)
+        setLoadedState(newTaskList)
     }
 
     private fun fetchTasks() {
-        state.value = TaskListState.Loading()
+        setLoadingState()
 
         try {
             val tasks = repository.getTasks()
-            state.value = TaskListState.Loaded(tasks)
+            setLoadedState(tasks)
         } catch (e: Throwable) {
-            state.value = TaskListState.Error()
+            setErrorState()
         }
+    }
+
+    private fun setErrorState() {
+        state.value = TaskListState.Error()
+    }
+
+    private fun setLoadedState(tasks: List<Task>) {
+        state.value = TaskListState.Loaded(tasks)
+    }
+
+    private fun setLoadingState() {
+        state.value = TaskListState.Loading()
     }
 }
