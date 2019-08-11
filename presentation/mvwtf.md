@@ -194,6 +194,30 @@ build-lists: true
 
 # Contract Class
 
+[.code-highlight: 1, 15]
+```kotlin
+class TaskListContract {
+
+    interface View {
+        fun showTasks(tasks: List<Task>)
+    }
+
+    interface Presenter {
+        fun viewCreated()
+        fun viewDestroyed()
+    }
+
+    interface Model {
+        fun getTasks(): List<Task>
+    }
+}
+```
+
+---
+
+# Contract Class
+
+[.code-highlight: 2-14]
 ```kotlin
 class TaskListContract {
 
@@ -231,6 +255,35 @@ class InMemoryTaskService : TaskListContract.Model {
 
 # View
 
+[.code-highlight: 1-3, 20]
+```kotlin
+class TaskListActivity : AppCompatActivity(), TaskListContract.View {
+    private val taskAdapter = TaskAdapter()
+    private val presenter = TaskListPresenter(this, TaskRepository())
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // ...
+
+        presenter.viewCreated()
+    }
+
+    override fun showTasks(tasks: List<Task>) {
+        taskAdapter.tasks = tasks
+    }
+
+    override fun onDestroy() {
+        presenter.viewDestroyed()
+        super.onDestroy()
+    }
+}
+```
+
+---
+
+# View
+
+[.code-highlight: 5-19]
 ```kotlin
 class TaskListActivity : AppCompatActivity(), TaskListContract.View {
     private val taskAdapter = TaskAdapter()
@@ -258,6 +311,29 @@ class TaskListActivity : AppCompatActivity(), TaskListContract.View {
 
 # Presenter
 
+[.code-highlight: 1-4, 14]
+```kotlin
+class TaskListPresenter(
+        private var view: TaskListContract.View?,
+        private val model: TaskListContract.Model
+) : TaskListContract.Presenter {
+
+    override fun viewCreated() {
+        val tasks = model.getTasks()
+        view?.showTasks(tasks)
+    }
+
+    override fun viewDestroyed() {
+        view = null
+    }
+}
+```
+
+---
+
+# Presenter
+
+[.code-highlight: 5-13]
 ```kotlin
 class TaskListPresenter(
         private var view: TaskListContract.View?,
@@ -324,6 +400,51 @@ class InMemoryTaskService : TaskRepository {
 
 # ViewModel
 
+[.code-highlight: 1-3, 14]
+```kotlin
+class TaskListViewModel(
+        private val repository: TaskRepository
+) {
+    private val tasks = MutableLiveData<List<Task>>()
+    fun getTasks(): LiveData<List<Task>> = tasks
+
+    init {
+        fetchTasks()
+    }
+
+    private fun fetchTasks() {
+        tasks.value = repository.getTasks()
+    }
+}
+```
+
+---
+
+# ViewModel
+
+[.code-highlight: 4-5]
+```kotlin
+class TaskListViewModel(
+        private val repository: TaskRepository
+) {
+    private val tasks = MutableLiveData<List<Task>>()
+    fun getTasks(): LiveData<List<Task>> = tasks
+
+    init {
+        fetchTasks()
+    }
+
+    private fun fetchTasks() {
+        tasks.value = repository.getTasks()
+    }
+}
+```
+
+---
+
+# ViewModel
+
+[.code-highlight: 6-13]
 ```kotlin
 class TaskListViewModel(
         private val repository: TaskRepository
@@ -345,6 +466,31 @@ class TaskListViewModel(
 
 # View
 
+```kotlin
+class TaskListActivity : AppCompatActivity() {
+    private val adapter = TaskAdapter()
+    private val viewModel = TaskListviewModel(repository = InMemoryTaskService())
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // ...
+
+        subscribeToViewModel()
+    }
+
+    private fun subscribeToViewModel() {
+        viewModel.getTasks().observe(this, Observer { tasks ->
+            adapter.tasks = tasks
+        })
+    }
+}
+```
+
+---
+
+# View
+
+[.code-highlight: 12-16]
 ```kotlin
 class TaskListActivity : AppCompatActivity() {
     private val adapter = TaskAdapter()
@@ -522,6 +668,74 @@ class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
 
 ---
 
+# Let's Consider A More Complicated State
+
+[.code-highlight: 5-12]
+```kotlin
+class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
+    private val state = MutableLiveData<TaskListState>()
+    fun getState(): LiveData<TaskListState> = state
+
+    init {
+        showLoading()
+        try {
+            fetchTasks()
+        } catch (e: Exception) {
+            showError()
+        }
+    }
+
+    private fun showLoading() {
+        state.value = TaskListState.Loading
+    }
+
+    private fun fetchTasks() {
+        val tasks = repository.getItems()
+        state.value = TaskListState.Loaded(tasks)
+    }
+
+    private fun showError() {
+        state.value = TaskListState.Error(Throwable("Unable to fetch tasks."))
+    }
+}
+```
+
+---
+
+# Let's Consider A More Complicated State
+
+[.code-highlight: 14-25]
+```kotlin
+class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
+    private val state = MutableLiveData<TaskListState>()
+    fun getState(): LiveData<TaskListState> = state
+
+    init {
+        showLoading()
+        try {
+            fetchTasks()
+        } catch (e: Exception) {
+            showError()
+        }
+    }
+
+    private fun showLoading() {
+        state.value = TaskListState.Loading
+    }
+
+    private fun fetchTasks() {
+        val tasks = repository.getItems()
+        state.value = TaskListState.Loaded(tasks)
+    }
+
+    private fun showError() {
+        state.value = TaskListState.Error(Throwable("Unable to fetch tasks."))
+    }
+}
+```
+
+---
+
 # What Are The Risks Of These Methods?
 
 ```kotlin
@@ -638,6 +852,90 @@ class BaseStore<S : State>(
 
 ---
 
+# Store Implementation
+
+[.code-highlight: 1-4, 20]
+```kotlin
+class BaseStore<S : State>(
+    initialState: S,
+    private val reducer: Reducer<S>
+) {
+    private var stateListener: ((S) -> Unit)? = null
+
+    private var currentState: S = initialState
+        set(value) {
+            field = value
+            stateListener?.invoke(value)
+        }
+
+    fun dispatch(action: Action) {
+        currentState = reducer.reduce(action, currentState)
+    }
+
+    fun subscribe(stateListener: ((S) -> Unit)?) {
+        this.stateListener = stateListener
+    }
+}
+```
+
+---
+
+# Store Implementation
+
+[.code-highlight: 5-11]
+```kotlin
+class BaseStore<S : State>(
+    initialState: S,
+    private val reducer: Reducer<S>
+) {
+    private var stateListener: ((S) -> Unit)? = null
+
+    private var currentState: S = initialState
+        set(value) {
+            field = value
+            stateListener?.invoke(value)
+        }
+
+    fun dispatch(action: Action) {
+        currentState = reducer.reduce(action, currentState)
+    }
+
+    fun subscribe(stateListener: ((S) -> Unit)?) {
+        this.stateListener = stateListener
+    }
+}
+```
+
+---
+
+# Store Implementation
+
+[.code-highlight: 13-15]
+```kotlin
+class BaseStore<S : State>(
+    initialState: S,
+    private val reducer: Reducer<S>
+) {
+    private var stateListener: ((S) -> Unit)? = null
+
+    private var currentState: S = initialState
+        set(value) {
+            field = value
+            stateListener?.invoke(value)
+        }
+
+    fun dispatch(action: Action) {
+        currentState = reducer.reduce(action, currentState)
+    }
+
+    fun subscribe(stateListener: ((S) -> Unit)?) {
+        this.stateListener = stateListener
+    }
+}
+```
+
+---
+
 # Redux Diagram[^2]
 
 ![inline](reduxdiagram.png)
@@ -646,24 +944,43 @@ class BaseStore<S : State>(
 
 ---
 
-# Hook This Up To Our ViewModel (Or Presenter!)
+# Hook This Up To Our ViewModel/Presenter
 
 ```kotlin
 class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
-    private val state = MutableLiveData<TaskListState>()
-
     private val store: BaseStore<TaskListState> = BaseStore(
         TaskListState.Loading(),
         TaskListReducer()
     )
 
-    init {
-        store.subscribe(state::setValue)
+    // ...
 
-        if (state.value == null) {
-            fetchTasks()
+    private fun fetchTasks() {
+        store.dispatch(TaskListAction.TasksLoading)
+
+        try {
+            val tasks = repository.getTasks()
+            store.dispatch(TaskListAction.TasksLoaded(tasks))
+        } catch (e: Throwable) {
+            store.dispatch(TaskListAction.TasksErrored(e))
         }
     }
+}
+```
+
+---
+
+# Hook This Up To Our ViewModel/Presenter
+
+[.code-highlight: 9-18]
+```kotlin
+class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
+    private val store: BaseStore<TaskListState> = BaseStore(
+        TaskListState.Loading(),
+        TaskListReducer()
+    )
+
+    // ...
 
     private fun fetchTasks() {
         store.dispatch(TaskListAction.TasksLoading)
@@ -695,7 +1012,7 @@ class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
 # Is MVI The Best We Can Do?
 
 - State management is pretty solid
-- But, we have 22 letters that weren't covered yet. 
+- But, we have 22 letters that weren't covered yet
 
 ---
 
