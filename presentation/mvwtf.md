@@ -1,4 +1,3 @@
-theme: Simple
 slidenumbers: true
 autoscale: true
 footer: @AdamMc331<br/>#AndroidSummit
