@@ -135,7 +135,11 @@ build-lists: true
 
 ---
 
-# Let's Break Them Down
+# Short Answer: State Management
+
+---
+
+# Long Answer: Let's Break Them Down
 
 ---
 
@@ -267,13 +271,13 @@ class TaskListActivity : AppCompatActivity(), TaskListContract.View {
         presenter.viewCreated()
     }
 
-    override fun showTasks(tasks: List<Task>) {
-        taskAdapter.tasks = tasks
-    }
-
     override fun onDestroy() {
         presenter.viewDestroyed()
         super.onDestroy()
+    }
+
+    override fun showTasks(tasks: List<Task>) {
+        taskAdapter.tasks = tasks
     }
 }
 ```
@@ -295,13 +299,13 @@ class TaskListActivity : AppCompatActivity(), TaskListContract.View {
         presenter.viewCreated()
     }
 
-    override fun showTasks(tasks: List<Task>) {
-        taskAdapter.tasks = tasks
-    }
-
     override fun onDestroy() {
         presenter.viewDestroyed()
         super.onDestroy()
+    }
+
+    override fun showTasks(tasks: List<Task>) {
+        taskAdapter.tasks = tasks
     }
 }
 ```
@@ -595,7 +599,9 @@ class TaskListActivity : AppCompatActivity() {
     private fun setupViewModel() {
         viewModel = ViewModelProviders.of(this, viewModelFactory).get(TaskListViewModel::class.java)
 
-        viewModel.tasks.observe(this, Observer(taskAdapter::tasks::set))
+        viewModel.getTasks().observe(this, Observer { tasks ->
+            taskAdapter.tasks = tasks
+        })
     }
 }
 ```
@@ -638,8 +644,6 @@ sealed class TaskListState {
 
 ```kotlin
 class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
-    private val state = MutableLiveData<TaskListState>()
-    fun getState(): LiveData<TaskListState> = state
 
     init {
         showLoading()
@@ -650,18 +654,7 @@ class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
-    private fun showLoading() {
-        state.value = TaskListState.Loading
-    }
-
-    private fun fetchTasks() {
-        val tasks = repository.getItems()
-        state.value = TaskListState.Loaded(tasks)
-    }
-
-    private fun showError() {
-        state.value = TaskListState.Error(Throwable("Unable to fetch tasks."))
-    }
+    // ...
 }
 ```
 
@@ -669,54 +662,9 @@ class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
 
 # Let's Consider A More Complicated State
 
-[.code-highlight: 5-12]
 ```kotlin
 class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
-    private val state = MutableLiveData<TaskListState>()
-    fun getState(): LiveData<TaskListState> = state
-
-    init {
-        showLoading()
-        try {
-            fetchTasks()
-        } catch (e: Exception) {
-            showError()
-        }
-    }
-
-    private fun showLoading() {
-        state.value = TaskListState.Loading
-    }
-
-    private fun fetchTasks() {
-        val tasks = repository.getItems()
-        state.value = TaskListState.Loaded(tasks)
-    }
-
-    private fun showError() {
-        state.value = TaskListState.Error(Throwable("Unable to fetch tasks."))
-    }
-}
-```
-
----
-
-# Let's Consider A More Complicated State
-
-[.code-highlight: 14-25]
-```kotlin
-class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
-    private val state = MutableLiveData<TaskListState>()
-    fun getState(): LiveData<TaskListState> = state
-
-    init {
-        showLoading()
-        try {
-            fetchTasks()
-        } catch (e: Exception) {
-            showError()
-        }
-    }
+    // ...
 
     private fun showLoading() {
         state.value = TaskListState.Loading
@@ -971,6 +919,33 @@ class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
 
 # Hook This Up To Our ViewModel/Presenter
 
+[.code-highlight: 2-5]
+```kotlin
+class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
+    private val store: BaseStore<TaskListState> = BaseStore(
+        TaskListState.Loading(),
+        TaskListReducer()
+    )
+
+    // ...
+
+    private fun fetchTasks() {
+        store.dispatch(TaskListAction.TasksLoading)
+
+        try {
+            val tasks = repository.getTasks()
+            store.dispatch(TaskListAction.TasksLoaded(tasks))
+        } catch (e: Throwable) {
+            store.dispatch(TaskListAction.TasksErrored(e))
+        }
+    }
+}
+```
+
+---
+
+# Hook This Up To Our ViewModel/Presenter
+
 [.code-highlight: 9-18]
 ```kotlin
 class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
@@ -1034,11 +1009,11 @@ class TaskListViewModel(private val repository: TaskRepository) : ViewModel() {
 - Separated concerns and allows us to unit test all of our code
 - Even better for quick prototyping
  - No contract class boilerplate
-- May be good for blog posts, but be conscious about how you expose information
- - Unlike MVP where we have a direct reference to the view, MVVM requires an observable type
- - Could be LiveData, RxJava, Event Bus, but these may be confusing to readers
+- Good for blog post samples because of its readability[^3]
 - Can handle config changes easily if we use Android's architecture components
 - State management is unpredictable
+
+[^3]: Depending on how you expose information
 
 ---
 
