@@ -1,0 +1,32 @@
+language: android
+
+android:
+  components:
+    - tools
+    - platform-tools
+    - build-tools-28.0.3
+    - extra-android-m2repository
+    - extra-android-support
+    - android-28
+
+sudo: required
+
+jdk:
+  - oraclejdk8
+
+jobs:
+  include:
+    - stage: buildTestMVP
+      script: 
+        - cd sampleapp
+        - ./gradlew mvp:clean mvp:build
+
+    - stage: buildTestMVVM
+      script: 
+        - cd sampleapp
+        - ./gradlew mvvm:clean mvvm:build
+
+    - stage: buildTestMVI
+      script: 
+        - cd sampleapp
+        - ./gradlew mvi:clean mvi:build
