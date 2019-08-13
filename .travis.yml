@@ -17,7 +17,11 @@ jdk:
 jobs:
   include:
     - stage: build
-      script: ./gradlew clean build -x test
+      script: 
+        - cd sampleapp
+        - ./gradlew clean build -x test
 
     - stage: test
-      script: ./gradlew test
+      script: 
+        - cd sampleapp
+        - ./gradlew test
