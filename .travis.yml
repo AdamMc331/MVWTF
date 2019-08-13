@@ -16,22 +16,17 @@ jdk:
 
 jobs:
   include:
-    - stage: buildMVP
+    - stage: buildTestMVP
       script: 
         - cd sampleapp
-        - ./gradlew mvp:clean mvp:build -x test
+        - ./gradlew mvp:clean mvp:build
 
-    - stage: buildMVVM
+    - stage: buildTestMVVM
       script: 
         - cd sampleapp
-        - ./gradlew mvvm:clean mvvm:build -x test
+        - ./gradlew mvvm:clean mvvm:build
 
-    - stage: buildMVI
+    - stage: buildTestMVI
       script: 
         - cd sampleapp
-        - ./gradlew mvi:clean mvi:build -x test
-
-    - stage: test
-      script: 
-        - cd sampleapp
-        - ./gradlew test
+        - ./gradlew mvi:clean mvi:build
